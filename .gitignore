@@ -1,0 +1,10 @@
+cmake-build-debug/
+.idea/
+.DS_Store
+
+binary/practica_micro
+binary/.DS_Store
+binary/resources/.DS_Store
+binary/resources/models/.DS_Store
+binary/resources/textures/.DS_Store
+src/.DS_Store
