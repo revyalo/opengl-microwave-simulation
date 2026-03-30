@@ -71,6 +71,7 @@ unsigned int createNightCubeMap();
 // Textura suelo o encimera
    Texture imgSuelo;
    Textures texturesSuelo;
+   Texture imgSueloNormal;
 // Textura del pollo
    Texture imgChicken;
    Textures texturesChicken;
@@ -342,11 +343,16 @@ void configScene() {
 
 
    imgSuelo.initTexture("resources/textures/marmolBlanco.jpg");
-   texturesSuelo.diffuse = imgSuelo.getTexture();
-   texturesSuelo.specular = 0;
-   texturesSuelo.emissive = 0;
-   texturesSuelo.shininess = 10.0;
-   texturaMicro.normal = 0;
+   imgSueloNormal.initTexture("resources/textures/marmolBlanco_normal.png");
+
+   texturesSuelo.diffuse   = imgSuelo.getTexture();
+   texturesSuelo.specular  = 0;
+   texturesSuelo.emissive  = 0;
+   texturesSuelo.normal    = imgSueloNormal.getTexture();
+   texturesSuelo.shininess = 25.0f;
+
+   texturaMicro.normal   = 0;
+   texturesChicken.normal = 0;
 
 
 }

@@ -46,6 +46,7 @@ uniform vec3     ueye;
 in  vec3 vnor;
 in  vec3 vpos;
 in  vec2 vtex;
+in  mat3 vTBN;
 
 out vec4 outColor;
 
@@ -73,7 +74,11 @@ void main() {
         material.specular  = texture(utextures.specular,vtex);
         material.emissive  = texture(utextures.emissive,vtex);
         material.shininess = utextures.shininess;
-        if(uWithNormals) N = normalize(texture(utextures.normal,vtex).rgb - 0.5);
+        if(uWithNormals) {
+            vec3 mapNormal = texture(utextures.normal, vtex).rgb;
+            mapNormal = normalize(mapNormal * 2.0 - 1.0);
+            N = normalize(vTBN * mapNormal);
+        }
     }
 
     vec3 color = material.emissive.rgb + ulightG.ambient * material.ambient.rgb;

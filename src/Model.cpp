@@ -38,6 +38,7 @@ void Model::initModel(const char *modelFile) {
 
     positions.clear();
     normals.clear();
+    tangents.clear();
     textureCoords.clear();
     indices.clear();
 
@@ -50,6 +51,16 @@ void Model::initModel(const char *modelFile) {
     }else {
         normals.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
     }
+
+        if (mesh->HasTangentsAndBitangents()) {
+            tangents.push_back(glm::normalize(glm::vec3(
+                mesh->mTangents[i].x,
+                mesh->mTangents[i].y,
+                mesh->mTangents[i].z
+            )));
+        } else {
+            tangents.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
+        }
 
         if (mesh->HasTextureCoords(0)) {
             textureCoords.push_back(glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y));
@@ -64,12 +75,14 @@ void Model::initModel(const char *modelFile) {
         for (unsigned int j = 0; j < face.mNumIndices; j++) {
             indices.push_back(face.mIndices[j]);
         }
+
     }
 
  // Crea un VAO con los atributos del modelo
     glGenVertexArrays(1,&vao);
     glGenBuffers(1,&vboPositions);
     glGenBuffers(1,&vboNormals);
+    glGenBuffers(1,&vboTangents);
     glGenBuffers(1,&vboTextureCoords);
     glGenBuffers(1,&eboIndices);
     glBindVertexArray(vao);
@@ -83,6 +96,11 @@ void Model::initModel(const char *modelFile) {
         glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*normals.size(), &(normals.front()), GL_STATIC_DRAW);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0); 
         glEnableVertexAttribArray(1);
+        // Tangentes
+        glBindBuffer(GL_ARRAY_BUFFER, vboTangents);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*tangents.size(), &(tangents.front()), GL_STATIC_DRAW);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(3);
      // Texturas
         glBindBuffer(GL_ARRAY_BUFFER, vboTextureCoords);
         glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*textureCoords.size(), &(textureCoords.front()), GL_STATIC_DRAW);
@@ -115,6 +133,7 @@ Model::~Model() {
     glDeleteVertexArrays(1,&vao);
     glDeleteBuffers(1,&vboPositions);
     glDeleteBuffers(1,&vboNormals);
+    glDeleteBuffers(1,&vboTangents);
     glDeleteBuffers(1,&vboTextureCoords);
     glDeleteBuffers(1,&eboIndices);
     

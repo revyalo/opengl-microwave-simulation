@@ -22,15 +22,17 @@ class Model {
         virtual ~Model();
                
     private:
-        
+
         std::vector<glm::vec3>      positions;
         std::vector<glm::vec3>      normals;
+        std::vector<glm::vec3>      tangents;
         std::vector<glm::vec2>      textureCoords;
         std::vector<unsigned short> indices;
-    
+
         unsigned int vao;
         unsigned int vboPositions;
         unsigned int vboNormals;
+        unsigned int vboTangents;
         unsigned int vboTextureCoords;
         unsigned int eboIndices;
 
