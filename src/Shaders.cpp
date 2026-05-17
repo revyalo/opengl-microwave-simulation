@@ -71,9 +71,9 @@ unsigned int Shaders::createProgram(unsigned int vShader, unsigned int fShader) 
     glGetProgramiv(program, GL_LINK_STATUS, &linked);
     if(linked == GL_FALSE) {
         int logSize;
-        glGetShaderiv(program, GL_INFO_LOG_LENGTH, &logSize);
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
         char *logMsg = new char[logSize];
-        glGetShaderInfoLog(program, logSize, NULL, logMsg);
+        glGetProgramInfoLog(program, logSize, NULL, logMsg);
         std::cout << "Error al enlazar el Shader: " << logMsg;
         delete[] logMsg;
         return 0;

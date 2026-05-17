@@ -32,6 +32,9 @@ void initSkybox();
 void renderSkybox(glm::mat4 P, glm::mat4 V);
 unsigned int createNightCubeMap();
 
+void initShadowMapping();
+void renderDepthScene();
+void drawObjectDepth(Model &model, glm::mat4 M);
 
 // Shaders
    Shaders shaders;
@@ -40,6 +43,16 @@ unsigned int createNightCubeMap();
    unsigned int skyboxVAO = 0;
    unsigned int skyboxVBO = 0;
    unsigned int skyboxCubemap = 0;
+
+   Shaders depthShader;
+
+   unsigned int depthMapFBO = 0;
+   unsigned int depthMap = 0;
+
+   const unsigned int SHADOW_WIDTH = 2048;
+   const unsigned int SHADOW_HEIGHT = 2048;
+
+   glm::mat4 lightSpaceMatrix = glm::mat4(1.0f);
 
 // Modelo del microondas
    Model cuerpo; //Carcasa del microondas
@@ -71,11 +84,13 @@ unsigned int createNightCubeMap();
 // Textura suelo o encimera
    Texture imgSuelo;
    Textures texturesSuelo;
-   Texture imgSueloNormal;
 // Textura del pollo
    Texture imgChicken;
    Textures texturesChicken;
-
+//Tectura pared
+   Texture imgPared;
+   Texture imgParedNormal;
+   Textures texturesPared;
 
 
 
@@ -88,9 +103,6 @@ unsigned int createNightCubeMap();
    Light     lightP[NLP];   //Luz posicional
    Light     lightF[NLF];   //Luz focal
    Material  mluz;
-   Material crema;
-
-   Material metalLamp;
    Material lampBaseMat;
    Material lampArmMat;
    Material lampHeadMat;
@@ -161,6 +173,8 @@ int main() {
     }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
+    glfwGetFramebufferSize(window, &w, &h);
+    glViewport(0, 0, w, h);
 
  // Inicializamos GLEW
     glewExperimental = GL_TRUE;
@@ -204,7 +218,10 @@ void configScene() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
  // Shaders
-    shaders.initShaders("resources/shaders/vshader.glsl","resources/shaders/fshader.glsl");
+   shaders.initShaders("resources/shaders/vshader.glsl","resources/shaders/fshader.glsl");
+   depthShader.initShaders("resources/shaders/shadow_depth_vshader.glsl", "resources/shaders/shadow_depth_fshader.glsl");
+
+   initShadowMapping();
 
    skyboxShaders.initShaders("resources/shaders/skybox_vshader.glsl","resources/shaders/skybox_fshader.glsl");
 
@@ -249,7 +266,6 @@ void configScene() {
 
    texturesChicken.diffuse = imgChicken.getTexture();
    texturesChicken.specular = 0;
-   texturesChicken.normal = 0;
    texturesChicken.emissive = 0.0;
    texturesChicken.normal = 0;
 
@@ -258,11 +274,10 @@ void configScene() {
     lightG.ambient = glm::vec3(0.1, 0.1, 0.1); //La ponemos oscura para resaltar el microondas
 
  // Luces direccionales, va a ser la luz del techo
-    lightD[0].direction = glm::vec3(0.0, -1.0, 0.0);
-    lightD[0].ambient   = glm::vec3(0.05,  0.05, 0.05);
-    lightD[0].diffuse   = glm::vec3(0.2,  0.2, 0.2);
-    lightD[0].specular  = glm::vec3(0.3,  0.3, 0.3);
-
+    lightD[0].direction = glm::vec3(0.0, 0.0, 0.0);
+   lightD[0].ambient  = glm::vec3(0.03f, 0.03f, 0.03f);
+   lightD[0].diffuse  = glm::vec3(0.35f, 0.35f, 0.35f);
+   lightD[0].specular = glm::vec3(0.20f, 0.20f, 0.20f);
  // Luces posicionales, la bombilla de dentro
     lightP[0].position    = glm::vec3(0.0, 0.4, 0.0);
     lightP[0].ambient     = glm::vec3(0.0, 0.0, 0.0);
@@ -291,11 +306,11 @@ void configScene() {
    lightF[1].ambient     = glm::vec3(0.0, 0.0, 0.0);
    lightF[1].diffuse     = glm::vec3(0.0, 0.0, 0.0);
    lightF[1].specular    = glm::vec3(0.0, 0.0, 0.0);
-   lightF[1].innerCutOff = 16.0;
-   lightF[1].outerCutOff = 24.0;
-   lightF[1].c0          = 1.000;
-   lightF[1].c1          = 0.090;
-   lightF[1].c2          = 0.032;
+   lightF[1].innerCutOff = 18.0f;
+   lightF[1].outerCutOff = 26.0f;
+   lightF[1].c0 = 1.0f;
+   lightF[1].c1 = 0.05f;
+   lightF[1].c2 = 0.01f;
 
 
  // Materiales base
@@ -304,18 +319,6 @@ void configScene() {
     mluz.specular  = glm::vec4(0.0, 0.0, 0.0, 1.0);
     mluz.emissive  = glm::vec4(1.0, 1.0, 1.0, 1.0);
     mluz.shininess = 1.0;
-
-   crema.ambient = glm::vec4(0.4, 0.4, 0.35, 1.0);
-   crema.diffuse  = glm::vec4(0.95, 0.92, 0.85, 1.0);
-   crema.specular = glm::vec4(0.1, 0.1, 0.1, 1.0);
-   crema.emissive = glm::vec4(0.0, 0.0, 0.0, 1.0);
-   crema.shininess = 10.0;
-
-   metalLamp.ambient = glm::vec4(0.25, 0.25, 0.28, 1.0);
-   metalLamp.diffuse = glm::vec4(0.7, 0.70, 0.75, 1.0);
-   metalLamp.specular = glm::vec4(0.9, 0.9, 0.95, 1.0);
-   metalLamp.emissive = glm::vec4(0.0, 0.0, 0.0, 1.0);
-   metalLamp.shininess = 80.0;
 
    lampBaseMat.ambient = glm::vec4(0.05, 0.05, 0.05, 1.0);
    lampBaseMat.diffuse = glm::vec4(0.12, 0.12, 0.12, 1.0);
@@ -343,21 +346,209 @@ void configScene() {
 
 
    imgSuelo.initTexture("resources/textures/marmolBlanco.jpg");
-   imgSueloNormal.initTexture("resources/textures/marmolBlanco_normal.png");
 
    texturesSuelo.diffuse   = imgSuelo.getTexture();
-   texturesSuelo.specular  = 0;
+   texturesSuelo.specular  = imgSuelo.getTexture();
    texturesSuelo.emissive  = 0;
-   texturesSuelo.normal    = imgSueloNormal.getTexture();
-   texturesSuelo.shininess = 25.0f;
+   texturesSuelo.normal    = 0;
+   texturesSuelo.shininess = 45.0f;
 
    texturaMicro.normal   = 0;
    texturesChicken.normal = 0;
 
+   imgPared.initTexture("resources/textures/white-bricks-texture.jpg");
+   imgParedNormal.initTexture("resources/textures/white-bricks-texture-normal.jpg");
 
+   texturesPared.diffuse   = imgPared.getTexture();
+   texturesPared.specular  = imgPared.getTexture();
+   texturesPared.emissive  = 0;
+   texturesPared.normal    = imgParedNormal.getTexture();
+   texturesPared.shininess = 20.0f;
+}
+
+void initShadowMapping() {
+
+   glGenFramebuffers(1, &depthMapFBO);
+
+   glGenTextures(1, &depthMap);
+   glBindTexture(GL_TEXTURE_2D, depthMap);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+                SHADOW_WIDTH, SHADOW_HEIGHT, 0,
+                GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+   float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
+   glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+   glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+   glDrawBuffer(GL_NONE);
+   glReadBuffer(GL_NONE);
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void drawObjectDepth(Model &model, glm::mat4 M) {
+
+   depthShader.setMat4("uM", M);
+   model.renderModel(GL_FILL);
+}
+
+void renderDepthScene() {
+
+   glm::vec3 hingeBotonUp = glm::vec3(1.90f, 1.40f, 1.65f);
+   glm::vec3 hingeBotonDown = glm::vec3(1.92f, 0.66f, 1.70f);
+
+   // Suelo
+   glm::mat4 Msuelo = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+   Msuelo = glm::scale(Msuelo, glm::vec3(10.0f, 1.0f, 10.0f));
+   drawObjectDepth(suelo, Msuelo);
+
+   // Microondas cuerpo
+   glm::mat4 M = I;
+   drawObjectDepth(cuerpo, M);
+
+   // Pared
+   glm::mat4 Mpared = glm::mat4(1.0f);
+   Mpared = glm::translate(Mpared, glm::vec3(0.0f, 4.0f, -5.0f));
+   Mpared = glm::scale(Mpared, glm::vec3(10.0f, 10.0f, 0.5f));
+   drawObjectDepth(pared, Mpared);
+
+   // Blender
+   glm::mat4 Mblender = glm::mat4(1.0f);
+   Mblender = glm::translate(Mblender, glm::vec3(-4.3f, -2.0f, 1.2f));
+   Mblender = glm::rotate(Mblender, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+   Mblender = glm::rotate(Mblender, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   Mblender = glm::scale(Mblender, glm::vec3(0.1f));
+   drawObjectDepth(blender, Mblender);
+
+   // Plato
+   glm::mat4 Mplato = glm::mat4(1.0f);
+   Mplato = glm::translate(Mplato, glm::vec3(-0.3f, 0.3f, 0.0f));
+   Mplato = glm::rotate(Mplato, glm::radians(anglePlate), glm::vec3(0, 1, 0));
+   drawObjectDepth(plato, Mplato);
+
+   // Pollo
+   glm::mat4 Mchicken = Mplato;
+   Mchicken = glm::translate(Mchicken, glm::vec3(-0.25f, 0.1f, 0.0f));
+   Mchicken = glm::rotate(Mchicken, glm::radians(-90.0f), glm::vec3(0, 0, 1));
+   Mchicken = glm::scale(Mchicken, glm::vec3(0.005f));
+   drawObjectDepth(chicken, Mchicken);
+
+   // Botones
+   glm::mat4 MbotonUp = glm::mat4(1.0f);
+   MbotonUp = glm::translate(MbotonUp, hingeBotonUp);
+   MbotonUp = glm::rotate(MbotonUp, glm::radians(rotBotonUp), glm::vec3(0, 0, 1));
+   drawObjectDepth(botonUp, MbotonUp);
+
+   glm::mat4 MbotonDown = glm::mat4(1.0f);
+   MbotonDown = glm::translate(MbotonDown, hingeBotonDown);
+   MbotonDown = glm::rotate(MbotonDown, glm::radians(rotBotonDown), glm::vec3(0, 0, 1));
+   drawObjectDepth(botonDown, MbotonDown);
+
+   // Puerta
+   glm::mat4 Mdoor = glm::mat4(1.0f);
+   glm::vec3 hingePos = glm::vec3(-2.25f, 0.0f, 1.70f);
+   Mdoor = glm::translate(Mdoor, hingePos);
+   Mdoor = glm::rotate(Mdoor, glm::radians(-angleDoor), glm::vec3(0, 1, 0));
+   Mdoor = glm::translate(Mdoor, -hingePos);
+   drawObjectDepth(puerta, Mdoor);
+
+   // Lámpara
+   float baseRadius = 0.42f;
+   float baseHalfH = 0.15f;
+   float jointR = 0.09f;
+   float armThickness = 0.08f;
+   float arm1Half = 0.68f;
+   float arm2Half = 0.56f;
+   float headRadius = 0.14f;
+   float headHalfLen = 0.34f;
+
+   glm::vec3 lampPos = glm::vec3(4.25f, baseHalfH, 1.45f);
+
+   glm::mat4 MbaseRoot = glm::mat4(1.0f);
+   MbaseRoot = glm::translate(MbaseRoot, lampPos);
+   MbaseRoot = glm::rotate(MbaseRoot, glm::radians(lampBaseAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+
+   glm::mat4 MLampBase = MbaseRoot;
+   MLampBase = glm::scale(MLampBase, glm::vec3(baseRadius, baseHalfH, baseRadius));
+   drawObjectDepth(lampBase, MLampBase);
+
+   glm::mat4 Mpivot1 = MbaseRoot;
+   Mpivot1 = glm::translate(Mpivot1, glm::vec3(0.0f, baseHalfH, 0.0f));
+
+   glm::mat4 Mjoint1 = Mpivot1;
+   Mjoint1 = glm::scale(Mjoint1, glm::vec3(jointR, jointR, jointR));
+   drawObjectDepth(lampJoint, Mjoint1);
+
+   glm::mat4 Marm1Pivot = Mpivot1;
+   Marm1Pivot = glm::rotate(Marm1Pivot, glm::radians(lampArm1Angle), glm::vec3(0.0f, 0.0f, 1.0f));
+
+   glm::mat4 MlampArm1 = Marm1Pivot;
+   MlampArm1 = glm::translate(MlampArm1, glm::vec3(0.0f, arm1Half, 0.0f));
+   MlampArm1 = glm::scale(MlampArm1, glm::vec3(armThickness, arm1Half, armThickness));
+   drawObjectDepth(lampArm1, MlampArm1);
+
+   glm::mat4 Mpivot2 = Marm1Pivot;
+   Mpivot2 = glm::translate(Mpivot2, glm::vec3(0.0f, 2.0f * arm1Half, 0.0f));
+
+   glm::mat4 Mjoint2 = Mpivot2;
+   Mjoint2 = glm::scale(Mjoint2, glm::vec3(jointR, jointR, jointR));
+   drawObjectDepth(lampJoint, Mjoint2);
+
+   glm::mat4 Marm2Pivot = Mpivot2;
+   Marm2Pivot = glm::rotate(Marm2Pivot, glm::radians(lampArm2Angle), glm::vec3(0.0f, 0.0f, 1.0f));
+
+   glm::mat4 MlampArm2 = Marm2Pivot;
+   MlampArm2 = glm::translate(MlampArm2, glm::vec3(0.0f, arm2Half, 0.0f));
+   MlampArm2 = glm::scale(MlampArm2, glm::vec3(armThickness, arm2Half, armThickness));
+   drawObjectDepth(lampArm2, MlampArm2);
+
+   glm::mat4 Mpivot3 = Marm2Pivot;
+   Mpivot3 = glm::translate(Mpivot3, glm::vec3(0.0f, 2.0f * arm2Half, 0.0f));
+
+   glm::mat4 Mjoint3 = Mpivot3;
+   Mjoint3 = glm::scale(Mjoint3, glm::vec3(0.045f, 0.045f, 0.045f));
+   drawObjectDepth(lampJoint, Mjoint3);
+
+   glm::mat4 MHeadPivot = Mpivot3;
+   MHeadPivot = glm::rotate(MHeadPivot, glm::radians(lampHeadAngle), glm::vec3(0.0f, 0.0f, 1.0f));
+
+   glm::mat4 MlampHead = MHeadPivot;
+   MlampHead = glm::translate(MlampHead, glm::vec3(headHalfLen, 0.0f, 0.0f));
+   MlampHead = glm::rotate(MlampHead, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+   MlampHead = glm::scale(MlampHead, glm::vec3(headRadius, headHalfLen, headRadius));
+   drawObjectDepth(lampHead, MlampHead);
 }
 
 void renderScene() {
+
+   glm::vec3 shadowDir = glm::normalize(glm::vec3(-0.4f, -1.0f, -0.2f));
+   lightD[0].direction = shadowDir;
+
+   glm::vec3 shadowLightPos = -shadowDir * 10.0f + glm::vec3(0.0f, 2.0f, 0.0f);
+
+   glm::mat4 lightProjection = glm::ortho(-8.0f, 8.0f, -8.0f, 8.0f, 1.0f, 25.0f);
+   glm::mat4 lightView = glm::lookAt(shadowLightPos,
+                                     glm::vec3(0.0f, 0.5f, 0.0f),
+                                     glm::vec3(0.0f, 1.0f, 0.0f));
+   lightSpaceMatrix = lightProjection * lightView;
+
+   glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+   glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+   glClear(GL_DEPTH_BUFFER_BIT);
+
+   depthShader.useShaders();
+   depthShader.setMat4("uLightSpaceMatrix", lightSpaceMatrix);
+   renderDepthScene();
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+   glViewport(0, 0, w, h);
 
  // Borramos el buffer de color
     glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -397,8 +588,15 @@ void renderScene() {
 
    }
 
-    glm::mat4 V = glm::lookAt(eye, center, up);
-    shaders.setVec3("ueye",eye);
+   glm::mat4 V = glm::lookAt(eye, center, up);
+   shaders.setVec3("ueye",eye);
+
+   shaders.setMat4("uLightSpaceMatrix", lightSpaceMatrix);
+   shaders.setBool("uUseShadows", 1);
+
+   glActiveTexture(GL_TEXTURE7);
+   glBindTexture(GL_TEXTURE_2D, depthMap);
+   shaders.setInt("uShadowMap", 7);
 
    //Calculo del control
    //Se ha convertido el angulo de los botones en un valor entre 0 y 1.
@@ -530,24 +728,23 @@ void renderScene() {
    MlampHead = glm::rotate(MlampHead, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
    MlampHead = glm::scale(MlampHead, glm::vec3(headRadius, headHalfLen, headRadius));
 
-   glm::vec3 lampBack = glm::vec3(MlampHead * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+   glm::vec3 lampBack  = glm::vec3(MlampHead * glm::vec4(0.0f,  0.0f, 0.0f, 1.0f));
    glm::vec3 lampFront = glm::vec3(MlampHead * glm::vec4(0.0f, -1.0f, 0.0f, 1.0f));
 
    glm::vec3 lampDir = glm::normalize(lampFront - lampBack);
-
-   glm::vec3 lampSpotPos =lampFront;
+   glm::vec3 lampSpotPos = lampFront;
 
    lightF[1].position = lampSpotPos;
    lightF[1].direction = lampDir;
 
    if (lampOn) {
-      lightF[1].ambient = glm::vec3(0.03f, 0.03f, 0.02f);
-      lightF[1].diffuse = glm::vec3(1.0f, 0.95f, 0.85f) * 3.0f;
+      lightF[1].ambient  = glm::vec3(0.03f, 0.03f, 0.02f);
+      lightF[1].diffuse  = glm::vec3(1.0f, 0.95f, 0.85f) * 3.0f;
       lightF[1].specular = glm::vec3(1.0f, 0.98f, 0.95f) * 2.2f;
-   }else {
-      lightF[1].ambient = glm::vec3(0, 0, 0);
-      lightF[1].diffuse = glm::vec3(0, 0, 0);
-      lightF[1].specular = glm::vec3(0, 0, 0);
+   } else {
+      lightF[1].ambient  = glm::vec3(0.0f);
+      lightF[1].diffuse  = glm::vec3(0.0f);
+      lightF[1].specular = glm::vec3(0.0f);
    }
 
    setLights(P, V);
@@ -571,8 +768,7 @@ void renderScene() {
    glm::mat4 Mpared = glm::mat4(1.0F);
    Mpared = glm::translate(Mpared, glm::vec3(0.0f, 4.0f, -5.0f));
    Mpared = glm::scale(Mpared, glm::vec3(10.0f, 10.0f, 0.5f));
-   drawObjectMat(pared, crema, P, V, Mpared);
-
+   drawObjectTex(pared, texturesPared, P, V, Mpared);
    //dibujamos el blender
    glm::mat4 Mblender = glm::mat4(1.0f);
    Mblender = glm::translate(Mblender, glm::vec3(-4.3f, -2.0f, 1.2f));

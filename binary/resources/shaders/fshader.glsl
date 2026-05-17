@@ -42,17 +42,20 @@ uniform Textures utextures;
 uniform bool     uWithMaterials;
 uniform bool     uWithNormals;
 uniform vec3     ueye;
+uniform sampler2D uShadowMap;
+uniform bool      uUseShadows;
 
 in  vec3 vnor;
 in  vec3 vpos;
 in  vec2 vtex;
-in  mat3 vTBN;
+in vec4 vposLightSpace;
 
 out vec4 outColor;
 
 vec3 funDirectional(Light light, Material material, vec3 N, vec3 V);
 vec3 funPositional (Light light, Material material, vec3 N, vec3 V);
 vec3 funFocal      (Light light, Material material, vec3 N, vec3 V);
+float ShadowCalculation(vec4 fragPosLightSpace, vec3 N, vec3 L);
 
 void main() {
 
@@ -75,9 +78,7 @@ void main() {
         material.emissive  = texture(utextures.emissive,vtex);
         material.shininess = utextures.shininess;
         if(uWithNormals) {
-            vec3 mapNormal = texture(utextures.normal, vtex).rgb;
-            mapNormal = normalize(mapNormal * 2.0 - 1.0);
-            N = normalize(vTBN * mapNormal);
+            N = normalize(texture(utextures.normal, vtex).rgb * 2.0 - 1.0);
         }
     }
 
@@ -100,14 +101,17 @@ vec3 funDirectional(Light light, Material material, vec3 N, vec3 V) {
     if(dotLN<0.0) dotLN = 0.0;
     else          dotRV = max(dot(R,V), 0.0);
 
-    vec3  ambient  = light.ambient  * material.ambient.rgb;
-    vec3  diffuse  = light.diffuse  * material.diffuse.rgb  * dotLN;
-    vec3  specular = light.specular * material.specular.rgb * pow(dotRV,material.shininess);
+    vec3 ambient  = light.ambient  * material.ambient.rgb;
+    vec3 diffuse  = light.diffuse  * material.diffuse.rgb  * dotLN;
+    vec3 specular = light.specular * material.specular.rgb * pow(dotRV,material.shininess);
 
-    vec3 color = ambient + diffuse + specular;
+    float shadow = 0.0;
+    if(uUseShadows)
+    shadow = ShadowCalculation(vposLightSpace, N, L);
+
+    vec3 color = ambient + (1.0 - shadow) * (diffuse + specular);
 
     return color;
-
 }
 
 vec3 funPositional(Light light, Material material, vec3 N, vec3 V) {
@@ -157,4 +161,31 @@ vec3 funFocal(Light light, Material material, vec3 N, vec3 V) {
 
     return color;
 
+}
+float ShadowCalculation(vec4 fragPosLightSpace, vec3 N, vec3 L) {
+
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    if(projCoords.z > 1.0)
+    return 0.0;
+
+    if(projCoords.x < 0.0 || projCoords.x > 1.0 ||
+    projCoords.y < 0.0 || projCoords.y > 1.0)
+    return 0.0;
+
+    float bias = max(0.005 * (1.0 - dot(N, L)), 0.0005);
+
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(uShadowMap, 0);
+
+    for(int x = -1; x <= 1; ++x) {
+        for(int y = -1; y <= 1; ++y) {
+            float pcfDepth = texture(uShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += (projCoords.z - bias > pcfDepth) ? 1.0 : 0.0;
+        }
+    }
+
+    shadow /= 9.0;
+    return shadow;
 }

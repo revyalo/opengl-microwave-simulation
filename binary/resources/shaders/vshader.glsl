@@ -3,34 +3,28 @@
 layout (location = 0) in vec3 inPosition;
 layout (location = 1) in vec3 inNormal;
 layout (location = 2) in vec2 inTexture;
-layout (location = 3) in vec3 inTangent;
 
 uniform mat4 uN;
 uniform mat4 uM;
 uniform mat4 uPVM;
+uniform mat4 uLightSpaceMatrix;
 
 out vec3 vnor;
 out vec3 vpos;
 out vec2 vtex;
-out mat3 vTBN;
+out vec4 vposLightSpace;
 
 void main() {
 
-    vec4 inPositionH = vec4(inPosition,1.0);
-    vec4 inNormalH   = vec4(inNormal  ,0.0);
+    vec4 inPositionH = vec4(inPosition,1);
+    vec4 inNormalH   = vec4(inNormal  ,0);
+
+    vec4 worldPos = uM * inPositionH;
 
     gl_Position = uPVM * inPositionH;
 
-    vec3 N = normalize((uN * inNormalH).xyz);
-    vec3 T = normalize((uM * vec4(inTangent,0.0)).xyz);
-
-    T = normalize(T - dot(T,N)*N);
-    vec3 B = normalize(cross(N,T));
-
-    vTBN = mat3(T,B,N);
-
-    vnor = N;
-    vpos = (uM * inPositionH).xyz;
+    vnor = (uN * inNormalH).xyz;
+    vpos = worldPos.xyz;
     vtex = inTexture;
-
+    vposLightSpace = uLightSpaceMatrix * worldPos;
 }
