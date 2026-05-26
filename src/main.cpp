@@ -965,26 +965,62 @@ void initSkybox() {
 
    skyboxCubemap = createNightCubeMap();
 }
-
 unsigned int createNightCubeMap() {
 
    unsigned int textureID;
    glGenTextures(1, &textureID);
    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
-   unsigned char posX[3] = { 12, 16, 30 };
-   unsigned char negX[3] = { 10, 14, 26 };
-   unsigned char posY[3] = { 20, 28, 55 };
-   unsigned char negY[3] = { 18, 18, 24 };
-   unsigned char posZ[3] = { 11, 15, 28 };
-   unsigned char negZ[3] = {  9, 12, 22 };
+   const int size = 256;
 
-   glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, posX);
-   glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, negX);
-   glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, posY);
-   glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, negY);
-   glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, posZ);
-   glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, negZ);
+   for (int face = 0; face < 6; face++) {
+
+      unsigned char* data = new unsigned char[size * size * 3];
+
+      for (int y = 0; y < size; y++) {
+         for (int x = 0; x < size; x++) {
+
+            float fy = float(y) / float(size - 1);
+
+            unsigned char r = (unsigned char)(8  + 12 * fy);
+            unsigned char g = (unsigned char)(12 + 18 * fy);
+            unsigned char b = (unsigned char)(28 + 45 * fy);
+
+            r += face * 2;
+            g += face * 2;
+            b += face * 3;
+
+            bool puedeTenerEstrellas = (face != 3);
+            if (puedeTenerEstrellas) {
+               int noise = (x * 37 + y * 91 + face * 53) % 997;
+               if (noise > 992 && fy > 0.35f) {
+                  r = 220;
+                  g = 225;
+                  b = 255;
+               }
+            }
+
+            int idx = (y * size + x) * 3;
+            data[idx + 0] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+         }
+      }
+
+      glTexImage2D(
+         GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+         0,
+         GL_RGB,
+         size,
+         size,
+         0,
+         GL_RGB,
+         GL_UNSIGNED_BYTE,
+         data
+      );
+
+      delete[] data;
+   }
 
    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

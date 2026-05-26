@@ -48,6 +48,8 @@ uniform bool      uUseShadows;
 in  vec3 vnor;
 in  vec3 vpos;
 in  vec2 vtex;
+in vec3 vtan;
+in vec3 vbit;
 in vec4 vposLightSpace;
 
 out vec4 outColor;
@@ -78,7 +80,18 @@ void main() {
         material.emissive  = texture(utextures.emissive,vtex);
         material.shininess = utextures.shininess;
         if(uWithNormals) {
-            N = normalize(texture(utextures.normal, vtex).rgb * 2.0 - 1.0);
+            vec3 normalTex = texture(utextures.normal, vtex).rgb;
+
+            normalTex = normalTex * 2.0 - 1.0;
+
+
+            mat3 TBN = mat3(
+            normalize(vtan),
+            normalize(vbit),
+            normalize(vnor)
+            );
+
+            N = normalize(TBN * normalTex);
         }
     }
 
