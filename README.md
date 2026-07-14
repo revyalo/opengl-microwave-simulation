@@ -139,7 +139,3 @@ El proyecto aplica varios conceptos de programación gráfica en tiempo real:
 
 **David Arévalo Rey**  
 Grado en Ingeniería Informática — Universidad Rey Juan Carlos
-
-## Créditos de recursos
-
-El proyecto utiliza modelos y texturas externos. Antes de redistribuir públicamente todos los recursos, se recomienda documentar en esta sección su autor, procedencia y licencia correspondiente.
