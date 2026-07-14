@@ -24,13 +24,16 @@ El proyecto fue desarrollado como trabajo individual para la asignatura de **Inf
 
 ## Tecnologías utilizadas
 
-- C++
+- C++17
 - OpenGL 3.3 Core Profile
 - GLSL
+- CMake 3.22+
+- CLion
 - GLFW
 - GLEW
 - GLM
 - Assimp
+- FreeImage
 
 ## Controles
 
@@ -56,34 +59,66 @@ El proyecto fue desarrollado como trabajo individual para la asignatura de **Inf
 
 ```text
 opengl-microwave-simulation/
-├── src/                         # Código fuente principal
+├── CMakeLists.txt                 # Configuración de compilación con CMake
+├── src/                           # Código fuente principal
 ├── binary/
 │   └── resources/
-│       ├── models/              # Modelos 3D en formato OBJ
-│       ├── textures/            # Texturas y mapas normales
-│       └── shaders/             # Shaders GLSL
-└── lib/                         # Dependencias incluidas en el proyecto
+│       ├── models/                # Modelos 3D en formato OBJ
+│       ├── textures/              # Texturas y mapas normales
+│       └── shaders/               # Shaders GLSL
+└── lib/                           # Dependencias y cabeceras incluidas
 ```
 
-## Ejecución
+## Entorno de desarrollo original
 
-La aplicación carga los recursos mediante rutas relativas como `resources/models`, `resources/textures` y `resources/shaders`. Por ello, el directorio de trabajo del ejecutable debe ser `binary/` o debe conservar una estructura equivalente en la que la carpeta `resources` quede junto al ejecutable.
+El proyecto fue desarrollado y probado con:
 
-### Requisitos
+- **CLion**
+- **MacBook Pro 2017 con procesador Intel**
+- **macOS Ventura 13.7.8**
+- **Homebrew** instalado en `/usr/local`
+- Estándar **C++17**
 
-- Compilador compatible con C++.
-- Tarjeta gráfica y controladores compatibles con OpenGL 3.3.
-- GLFW, GLEW, GLM y Assimp correctamente incluidos y enlazados.
+La configuración de compilación se encuentra en `CMakeLists.txt`. El ejecutable generado se llama `practica_micro` y se guarda en la carpeta `binary/`.
 
-### Compilación
+## Instalación y ejecución en macOS
 
-Este repositorio conserva el código fuente, las bibliotecas y los recursos del proyecto, pero actualmente no incluye un sistema de compilación automatizado como CMake. Para compilarlo desde otro entorno es necesario:
+### 1. Instalar las dependencias
 
-1. Crear o abrir un proyecto de C++.
-2. Añadir los archivos de `src/`.
-3. Configurar las rutas de inclusión y enlazado de las dependencias de `lib/`.
-4. Copiar o mantener `binary/resources/` junto al ejecutable.
-5. Ejecutar la aplicación usando `binary/` como directorio de trabajo.
+```bash
+brew install cmake glew glfw glm assimp freeimage
+```
+
+### 2. Abrir el proyecto en CLion
+
+1. Clona el repositorio.
+2. Abre en CLion la carpeta que contiene `CMakeLists.txt`.
+3. Espera a que CLion configure el proyecto mediante CMake.
+4. Selecciona la configuración de ejecución `practica_micro`.
+5. Configura el directorio de trabajo como la carpeta `binary/` del proyecto.
+6. Compila y ejecuta el proyecto.
+
+La aplicación carga los recursos mediante rutas relativas como `resources/models`, `resources/textures` y `resources/shaders`. Por ello, el directorio de trabajo debe ser `binary/` para que el programa pueda encontrar correctamente los modelos, texturas y shaders.
+
+### Rutas de Homebrew
+
+El `CMakeLists.txt` original contiene rutas correspondientes a las versiones de Homebrew utilizadas durante el desarrollo:
+
+- GLEW `2.2.0_1`
+- GLFW `3.4`
+- GLM `1.0.1`
+- Assimp `6.0.2`
+- FreeImage `3.18.0`
+
+Si Homebrew instala versiones distintas, será necesario actualizar esas rutas en `CMakeLists.txt`. Las rutas actuales de cada dependencia pueden consultarse con:
+
+```bash
+brew --prefix glew
+brew --prefix glfw
+brew --prefix glm
+brew --prefix assimp
+brew --prefix freeimage
+```
 
 ## Conceptos gráficos implementados
 
@@ -104,3 +139,7 @@ El proyecto aplica varios conceptos de programación gráfica en tiempo real:
 
 **David Arévalo Rey**  
 Grado en Ingeniería Informática — Universidad Rey Juan Carlos
+
+## Créditos de recursos
+
+El proyecto utiliza modelos y texturas externos. Antes de redistribuir públicamente todos los recursos, se recomienda documentar en esta sección su autor, procedencia y licencia correspondiente.
