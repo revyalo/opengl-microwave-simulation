@@ -1,0 +1,9 @@
+.git
+.github
+.idea
+build
+cmake-build-*
+binary
+docs
+lib
+memoria.pdf

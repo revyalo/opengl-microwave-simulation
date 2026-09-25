@@ -32,6 +32,8 @@ El proyecto fue desarrollado como trabajo individual para la asignatura de **Inf
 - OpenGL 3.3 Core Profile
 - GLSL
 - CMake 3.22+
+- Docker
+- GitHub Actions
 - CLion
 - GLFW
 - GLEW
@@ -63,7 +65,9 @@ El proyecto fue desarrollado como trabajo individual para la asignatura de **Inf
 
 ```text
 opengl-microwave-simulation/
+├── .github/workflows/build.yml    # Compilación reproducible en CI
 ├── CMakeLists.txt                 # Configuración de compilación con CMake
+├── Dockerfile                     # Build de verificación en Linux
 ├── src/                           # Código fuente principal
 ├── binary/
 │   └── resources/
@@ -73,56 +77,74 @@ opengl-microwave-simulation/
 └── lib/                           # Dependencias y cabeceras incluidas
 ```
 
-## Entorno de desarrollo original
+## Compilación portable
 
-El proyecto fue desarrollado y probado con:
+La configuración de CMake busca las dependencias instaladas en el sistema y no contiene rutas ligadas a una versión concreta de Homebrew. El ejecutable generado se llama `practica_micro` y se guarda en `binary/` para que pueda cargar los recursos mediante rutas relativas.
 
-- **CLion**
-- **MacBook Pro 2017 con procesador Intel**
-- **macOS Ventura 13.7.8**
-- **Homebrew** instalado en `/usr/local`
-- Estándar **C++17**
+### macOS con Homebrew
 
-La configuración de compilación se encuentra en `CMakeLists.txt`. El ejecutable generado se llama `practica_micro` y se guarda en la carpeta `binary/`.
-
-## Instalación y ejecución en macOS
-
-### 1. Instalar las dependencias
+Instala las dependencias:
 
 ```bash
 brew install cmake glew glfw glm assimp freeimage
 ```
 
-### 2. Abrir el proyecto en CLion
-
-1. Clona el repositorio.
-2. Abre en CLion la carpeta que contiene `CMakeLists.txt`.
-3. Espera a que CLion configure el proyecto mediante CMake.
-4. Selecciona la configuración de ejecución `practica_micro`.
-5. Configura el directorio de trabajo como la carpeta `binary/` del proyecto.
-6. Compila y ejecuta el proyecto.
-
-La aplicación carga los recursos mediante rutas relativas como `resources/models`, `resources/textures` y `resources/shaders`. Por ello, el directorio de trabajo debe ser `binary/` para que el programa pueda encontrar correctamente los modelos, texturas y shaders.
-
-### Rutas de Homebrew
-
-El `CMakeLists.txt` original contiene rutas correspondientes a las versiones de Homebrew utilizadas durante el desarrollo:
-
-- GLEW `2.2.0_1`
-- GLFW `3.4`
-- GLM `1.0.1`
-- Assimp `6.0.2`
-- FreeImage `3.18.0`
-
-Si Homebrew instala versiones distintas, será necesario actualizar esas rutas en `CMakeLists.txt`. Las rutas actuales de cada dependencia pueden consultarse con:
+Configura y compila desde la raíz del repositorio:
 
 ```bash
-brew --prefix glew
-brew --prefix glfw
-brew --prefix glm
-brew --prefix assimp
-brew --prefix freeimage
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
 ```
+
+Si CMake no encuentra los paquetes en un Mac con Apple Silicon, indica el prefijo de Homebrew sin fijar ninguna ruta de versión:
+
+```bash
+cmake -S . -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="$(brew --prefix)"
+```
+
+Ejecuta la aplicación desde `binary/`, que contiene la carpeta `resources/`:
+
+```bash
+cd binary
+./practica_micro
+```
+
+También se puede abrir el repositorio en CLion, seleccionar el target `practica_micro` y configurar `binary/` como directorio de trabajo.
+
+### Linux
+
+En Ubuntu 24.04 o una distribución compatible, instala:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+  build-essential cmake ninja-build \
+  libglew-dev libglfw3-dev libglm-dev \
+  libassimp-dev libfreeimage-dev libgl1-mesa-dev
+```
+
+Después configura y compila:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+```
+
+### Compilación reproducible con Docker
+
+El contenedor instala las dependencias en Ubuntu y compila el ejecutable, pero no intenta abrir la interfaz gráfica:
+
+```bash
+docker build -t opengl-microwave .
+```
+
+GitHub Actions ejecuta este mismo build en cada Pull Request y en cada cambio integrado en `main`.
+
+## Entorno de desarrollo original
+
+El proyecto se desarrolló originalmente con CLion en un MacBook Pro Intel con macOS Ventura. El build portable conserva ese flujo de trabajo, pero sustituye las rutas de Homebrew fijadas a versiones concretas por detección estándar de paquetes mediante CMake.
 
 ## Conceptos gráficos implementados
 

@@ -1,0 +1,22 @@
+name: Portable build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-build:
+    name: Compile in Linux container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build compile-only image
+        run: docker build --tag opengl-microwave-build .
