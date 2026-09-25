@@ -4,6 +4,10 @@ Simulación 3D interactiva de una cocina nocturna desarrollada en **C++** con **
 
 El proyecto fue desarrollado como trabajo individual para la asignatura de **Informática Gráfica** del Grado en Ingeniería Informática de la Universidad Rey Juan Carlos.
 
+![Vista principal de la simulación con la puerta del microondas abierta](docs/images/microwave-door-open.png)
+
+*Escena principal con la puerta animada abierta, iluminación interior, sombras y modelos 3D.*
+
 ## Características principales
 
 - Apertura y cierre animado de la puerta del microondas.
